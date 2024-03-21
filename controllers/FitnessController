@@ -1,0 +1,751 @@
+const proteinModel = require('../models/ProteinContent')
+const carboModel = require('../models/CarboContent')
+const fatModel = require('../models/FatContent')
+const fiberModel = require('../models/FiberContent')
+const vitaminModel = require('../models/VitaminContent')
+const mineralModel = require('../models/MineralContent')
+const bgwInitialPlanModel = require('../models/BgwInitialPlan')
+const bgwPostPlanModel = require('../models/BgwPostPlan')
+const blwInitialPlanModel = require('../models/BlwInitialPlan')
+const blwPostPlanModel = require('../models/BlwPostPlan')
+const igwInitialPlanModel = require('../models/IgwInitialPlan')
+const igwPostPlanModel = require('../models/IgwPostPlan')
+const ilwInitialPlanModel = require('../models/IlwInitialPlan')
+const ilwPostPlanModel = require('../models/IlwPostPlan')
+const agwInitialPlanModel = require('../models/AgwInitialPlan')
+const agwPostPlanModel = require('../models/AgwPostPlan')
+const alwInitialPlanModel = require('../models/AlwInitialPlan')
+const alwPostPlanModel = require('../models/AlwPostPlan')
+const userModel = require('../models/UserAuth')
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken')
+
+
+module.exports.saveUser = async (req, res) => {
+    try {
+        const { name, email, password, dateOfBirth, location, height, weight, age, mobileNumber, notes } = req.body;
+        var emailExist = await userModel.findOne({email: req.body.email})
+        if(emailExist){
+            return res.status(400).json("Email already exist")
+        }
+        var hash = await bcrypt.hash(password, 10);
+        if (!name) {
+            return res.status(400).json({ error: 'Name is required in the request body' });
+        }
+
+        const dateOfBirthDate = new Date(dateOfBirth);
+        const newUser = await userModel.create({
+            name,
+            email,
+            password: hash,
+            dateOfBirth: dateOfBirthDate,
+            location,
+            height,
+            weight,
+            age,
+            mobileNumber,
+            notes
+        });
+        console.log("User Added Successfully:", newUser);
+        res.send(newUser);
+    } catch (error) {
+        console.error('Error adding user:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.loginUser = async(req, res)=>{
+    try{
+        var userData = await userModel.findOne({email: req.body.email})
+        if(!userData){
+            return res.status(400).json("Email not exist")
+        }
+        var validPsw = await bcrypt.compare(req.body.password, userData.password)
+
+        if(!validPsw){
+            return res.status(400).json('Password not valid');
+        }
+        const userToken = await jwt.sign({email:userData.email},'secret');
+
+        res.header('auth', userToken).json({ token: userToken, userData: userData });
+
+
+    }catch(err){
+        res.status(400).json(err);
+
+    }
+}
+// const validUser = (req, res, next) => {
+//     var token = req.header('auth');
+//     req.token = token;
+//     next();
+// }
+
+module.exports.getNote = async (req, res) => {
+    try {
+        const userEmail = req.query.email;
+        const userData = await userModel.findOne({ email: userEmail }).select(['-password']); 
+        res.json(userData);
+    } catch (err) {
+        console.error('Error fetching data:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+module.exports.addNote =  async (req, res) => {
+    try {
+        const { userId, content } = req.body;
+        const user = await userModel.findByIdAndUpdate(userId, { $push: { notes: { content } } }, { new: true });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.status(200).json(user);
+    } catch (error) {
+        console.error('Error adding note:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+module.exports.deleteNotes = async (req, res) => {
+    try {
+        const { userId, noteId } = req.body;
+        console.log("userId:", userId);
+        console.log("noteId:", noteId);
+
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const noteIndex = user.notes.findIndex(note => note._id.toString() === noteId);
+        if (noteIndex === -1) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+        if (!user.notes[noteIndex].content) {
+            return res.status(400).json({ error: 'Note content is required' });
+        }
+
+        user.notes.splice(noteIndex, 1);
+        await user.save();
+
+        res.status(200).json(user);
+    } catch (error) {
+        console.error('Error deleting note:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+
+
+module.exports.saveProtein = async (req, res) => {
+    try {
+        const { FoodItem,Quantity,Content } = req.body;
+        if (!FoodItem) {
+            return res.status(400).json({ error: 'FoodItem is required in the request body' });
+        }
+        if (!Quantity) {
+            return res.status(400).json({ error: 'Quantity is required in the request body' });
+        }
+        if (!Content) {
+            return res.status(400).json({ error: 'Content is required in the request body' });
+        }
+
+        const newProtein = await proteinModel.create({ FoodItem,Quantity,Content });
+        console.log("Added Successfully...");
+        console.log(newProtein);
+        res.send(newProtein);
+    } catch (error) {
+        console.error('Error adding protein:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+module.exports.saveCarbo = async (req, res) => {
+    try {
+        const { FoodItem,Quantity,Content } = req.body;
+        if (!FoodItem) {
+            return res.status(400).json({ error: 'FoodItem is required in the request body' });
+        }
+        if (!Quantity) {
+            return res.status(400).json({ error: 'Quantity is required in the request body' });
+        }
+        if (!Content) {
+            return res.status(400).json({ error: 'Content is required in the request body' });
+        }
+
+        const newCarbo = await carboModel.create({ FoodItem,Quantity,Content });
+        console.log("Added Successfully...");
+        console.log(newCarbo);
+        res.send(newCarbo);
+    } catch (error) {
+        console.error('Error adding Carbohydrates:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveFat = async (req, res) => {
+    try {
+        const { FoodItem,Quantity,Content } = req.body;
+        if (!FoodItem) {
+            return res.status(400).json({ error: 'FoodItem is required in the request body' });
+        }
+        if (!Quantity) {
+            return res.status(400).json({ error: 'Quantity is required in the request body' });
+        }
+        if (!Content) {
+            return res.status(400).json({ error: 'Content is required in the request body' });
+        }
+
+        const newFat = await fatModel.create({ FoodItem,Quantity,Content });
+        console.log("Added Successfully...");
+        console.log(newFat);
+        res.send(newFat);
+    } catch (error) {
+        console.error('Error adding Fat:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveFiber = async (req, res) => {
+    try {
+        const { FoodItem,Quantity,Content } = req.body;
+        if (!FoodItem) {
+            return res.status(400).json({ error: 'FoodItem is required in the request body' });
+        }
+        if (!Quantity) {
+            return res.status(400).json({ error: 'Quantity is required in the request body' });
+        }
+        if (!Content) {
+            return res.status(400).json({ error: 'Content is required in the request body' });
+        }
+
+        const newFiber = await fiberModel.create({ FoodItem,Quantity,Content });
+        console.log("Added Successfully...");
+        console.log(newFiber);
+        res.send(newFiber);
+    } catch (error) {
+        console.error('Error adding Fiber:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveVitamin = async (req, res) => {
+    try {
+        const { FoodItem,Quantity,Content } = req.body;
+        if (!FoodItem) {
+            return res.status(400).json({ error: 'FoodItem is required in the request body' });
+        }
+        if (!Quantity) {
+            return res.status(400).json({ error: 'Quantity is required in the request body' });
+        }
+        if (!Content) {
+            return res.status(400).json({ error: 'Content is required in the request body' });
+        }
+
+        const newVitamin = await vitaminModel.create({ FoodItem,Quantity,Content });
+        console.log("Added Successfully...");
+        console.log(newVitamin);
+        res.send(newVitamin);
+    } catch (error) {
+        console.error('Error adding Vitamin:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveMineral = async (req, res) => {
+    try {
+        const { FoodItem,Quantity,Content } = req.body;
+        if (!FoodItem) {
+            return res.status(400).json({ error: 'FoodItem is required in the request body' });
+        }
+        if (!Quantity) {
+            return res.status(400).json({ error: 'Quantity is required in the request body' });
+        }
+        if (!Content) {
+            return res.status(400).json({ error: 'Content is required in the request body' });
+        }
+
+        const newMineral = await mineralModel.create({ FoodItem,Quantity,Content });
+        console.log("Added Successfully...");
+        console.log(newMineral);
+        res.send(newMineral);
+    } catch (error) {
+        console.error('Error adding Mineral:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveBgwInitialPlan = async (req, res) => {
+    try {
+        const { head, list } = req.body;
+        if (!head) {
+            return res.status(400).json({ error: 'head is required in the request body' });
+        }
+        if (!list) {
+            return res.status(400).json({ error: 'list is required in the request body' });
+        }
+
+        const newBgwInitialPlan = await bgwInitialPlanModel.create({ head, list });
+        console.log("Added Successfully...");
+        console.log(newBgwInitialPlan);
+        res.send(newBgwInitialPlan);
+    } catch (error) {
+        console.error('Error adding BGW initial plan:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveAgwInitialPlan = async (req, res) => {
+    try {
+        const { head, list } = req.body;
+        if (!head) {
+            return res.status(400).json({ error: 'head is required in the request body' });
+        }
+        if (!list) {
+            return res.status(400).json({ error: 'list is required in the request body' });
+        }
+
+        const newAgwInitialPlan = await agwInitialPlanModel.create({ head, list });
+        console.log("Added Successfully...");
+        console.log(newAgwInitialPlan);
+        res.send(newAgwInitialPlan);
+    } catch (error) {
+        console.error('Error adding AGW Initial Plan:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveIgwInitialPlan = async (req, res) => {
+    try {
+        const { head, list } = req.body;
+        if (!head) {
+            return res.status(400).json({ error: 'head is required in the request body' });
+        }
+        if (!list) {
+            return res.status(400).json({ error: 'list is required in the request body' });
+        }
+
+        const newIgwInitialPlan = await igwInitialPlanModel.create({ head, list });
+        console.log("Added Successfully...");
+        console.log(newIgwInitialPlan);
+        res.send(newIgwInitialPlan);
+    } catch (error) {
+        console.error('Error adding IGW Initial Plan:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveBlwInitialPlan = async (req, res) => {
+    try {
+        const { head, list } = req.body;
+        if (!head) {
+            return res.status(400).json({ error: 'head is required in the request body' });
+        }
+        if (!list) {
+            return res.status(400).json({ error: 'list is required in the request body' });
+        }
+
+        const newBlwInitialPlan = await blwInitialPlanModel.create({ head, list });
+        console.log("Added Successfully...");
+        console.log(newBlwInitialPlan);
+        res.send(newBlwInitialPlan);
+    } catch (error) {
+        console.error('Error adding BLW Initial Plan:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveIlwInitialPlan = async (req, res) => {
+    try {
+        const { head, list } = req.body;
+        if (!head) {
+            return res.status(400).json({ error: 'head is required in the request body' });
+        }
+        if (!list) {
+            return res.status(400).json({ error: 'list is required in the request body' });
+        }
+
+        const newIlwInitialPlan = await ilwInitialPlanModel.create({ head, list });
+        console.log("Added Successfully...");
+        console.log(newIlwInitialPlan);
+        res.send(newIlwInitialPlan);
+    } catch (error) {
+        console.error('Error adding ILW Initial Plan:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveAlwInitialPlan = async (req, res) => {
+    try {
+        const { head, list } = req.body;
+        if (!head) {
+            return res.status(400).json({ error: 'head is required in the request body' });
+        }
+        if (!list) {
+            return res.status(400).json({ error: 'list is required in the request body' });
+        }
+
+        const newAlwInitialPlan = await alwInitialPlanModel.create({ head, list });
+        console.log("Added Successfully...");
+        console.log(newAlwInitialPlan);
+        res.send(newAlwInitialPlan);
+    } catch (error) {
+        console.error('Error adding ALW Initial Plan:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveBgwPostPlan = async (req, res) => {
+    try {
+        const { workout, Days } = req.body;
+        if (!workout) {
+            return res.status(400).json({ error: 'workout is required in the request body' });
+        }
+        if (!Days) {
+            return res.status(400).json({ error: 'Days is required in the request body' });
+        }
+
+        const newBgwPostPlan = await bgwPostPlanModel.create({ workout,Days });
+        console.log("Added Successfully...");
+        console.log(newBgwPostPlan);
+        res.send(newBgwPostPlan);
+    } catch (error) {
+        console.error('Error adding BGW Post Plan:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveAgwPostPlan = async (req, res) => {
+    try {
+        const { workout, Days } = req.body;
+        if (!workout) {
+            return res.status(400).json({ error: 'workout is required in the request body' });
+        }
+        if (!Days) {
+            return res.status(400).json({ error: 'Days is required in the request body' });
+        }
+
+        const newAgwPostPlan = await agwPostPlanModel.create({ workout,Days });
+        console.log("Added Successfully...");
+        console.log(newAgwPostPlan);
+        res.send(newAgwPostPlan);
+    } catch (error) {
+        console.error('Error adding AGW Post Plan:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveIgwPostPlan = async (req, res) => {
+    try {
+        const { workout, Days } = req.body;
+        if (!workout) {
+            return res.status(400).json({ error: 'workout is required in the request body' });
+        }
+        if (!Days) {
+            return res.status(400).json({ error: 'Days is required in the request body' });
+        }
+
+        const newIgwPostPlan = await igwPostPlanModel.create({ workout,Days });
+        console.log("Added Successfully...");
+        console.log(newIgwPostPlan);
+        res.send(newIgwPostPlan);
+    } catch (error) {
+        console.error('Error adding IGW Post Plan:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveIlwPostPlan = async (req, res) => {
+    try {
+        const { workout, Days } = req.body;
+        if (!workout) {
+            return res.status(400).json({ error: 'workout is required in the request body' });
+        }
+        if (!Days) {
+            return res.status(400).json({ error: 'Days is required in the request body' });
+        }
+
+        const newIlwPostPlan = await ilwPostPlanModel.create({ workout,Days });
+        console.log("Added Successfully...");
+        console.log(newIlwPostPlan);
+        res.send(newIlwPostPlan);
+    } catch (error) {
+        console.error('Error adding ILW Post Plan:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveAlwPostPlan = async (req, res) => {
+    try {
+        const { workout, Days } = req.body;
+        if (!workout) {
+            return res.status(400).json({ error: 'workout is required in the request body' });
+        }
+        if (!Days) {
+            return res.status(400).json({ error: 'Days is required in the request body' });
+        }
+
+        const newAlwPostPlan = await alwPostPlanModel.create({ workout,Days });
+        console.log("Added Successfully...");
+        console.log(newAlwPostPlan);
+        res.send(newAlwPostPlan);
+    } catch (error) {
+        console.error('Error adding ALW Post Plan:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.saveBlwPostPlan = async (req, res) => {
+    try {
+        const { workout, Days } = req.body;
+        if (!workout) {
+            return res.status(400).json({ error: 'workout is required in the request body' });
+        }
+        if (!Days) {
+            return res.status(400).json({ error: 'Days is required in the request body' });
+        }
+
+        const newBlwPostPlan = await blwPostPlanModel.create({ workout,Days });
+        console.log("Added Successfully...");
+        console.log(newBlwPostPlan);
+        res.send(newBlwPostPlan);
+    } catch (error) {
+        console.error('Error adding BLW Post Plan:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getProtein = async (req, res) => {
+    try {
+        const protein = await proteinModel.find();
+        if (protein.length === 0) {
+            return res.status(404).send('No protein data found');
+        }
+        res.send(protein);
+    } catch (error) {
+        console.error('Error fetching protein data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getCarbo = async (req, res) => {
+    try {
+        const carbo = await carboModel.find();
+        if (carbo.length === 0) {
+            return res.status(404).send('No carbo data found');
+        }
+        res.send(carbo);
+    } catch (error) {
+        console.error('Error fetching carbo data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getFat = async (req, res) => {
+    try {
+        const fat = await fatModel.find();
+        if (fat.length === 0) {
+            return res.status(404).send('No fat data found');
+        }
+        res.send(fat);
+    } catch (error) {
+        console.error('Error fetching Fat data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getFiber = async (req, res) => {
+    try {
+        const fiber = await fiberModel.find();
+        if (fiber.length === 0) {
+            return res.status(404).send('No fiber data found');
+        }
+        res.send(fiber);
+    } catch (error) {
+        console.error('Error fetching Fiber data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getVitamin = async (req, res) => {
+    try {
+        const vitamin = await vitaminModel.find();
+        if (vitamin.length === 0) {
+            return res.status(404).send('No vitamin data found');
+        }
+        res.send(vitamin);
+    } catch (error) {
+        console.error('Error fetching Vitamin data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getMineral = async (req, res) => {
+    try {
+        const mineral = await mineralModel.find();
+        if (mineral.length === 0) {
+            return res.status(404).send('No mineral data found');
+        }
+        res.send(mineral);
+    } catch (error) {
+        console.error('Error fetching Mineral data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getBgwInitialPlan = async (req, res) => {
+    try {
+        const bgwInitialPlan = await bgwInitialPlanModel.find();
+        if (bgwInitialPlan.length === 0) {
+            return res.status(404).send('No carbo data found');
+        }
+        res.send(bgwInitialPlan);
+    } catch (error) {
+        console.error('Error fetching BGW Initial Plan data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getAgwInitialPlan = async (req, res) => {
+    try {
+        const agwInitialPlan = await agwInitialPlanModel.find();
+        if (agwInitialPlan.length === 0) {
+            return res.status(404).send('No carbo data found');
+        }
+        res.send(agwInitialPlan);
+    } catch (error) {
+        console.error('Error fetching AGW Initial Plan data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getIgwInitialPlan = async (req, res) => {
+    try {
+        const igwInitialPlan = await igwInitialPlanModel.find();
+        if (igwInitialPlan.length === 0) {
+            return res.status(404).send('No carbo data found');
+        }
+        res.send(igwInitialPlan);
+    } catch (error) {
+        console.error('Error fetching IGW Initial Plan data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getBlwInitialPlan = async (req, res) => {
+    try {
+        const blwInitialPlan = await igwInitialPlanModel.find();
+        if (blwInitialPlan.length === 0) {
+            return res.status(404).send('No carbo data found');
+        }
+        res.send(blwInitialPlan);
+    } catch (error) {
+        console.error('Error fetching BLW Initial Plan data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getIlwInitialPlan = async (req, res) => {
+    try {
+        const ilwInitialPlan = await ilwInitialPlanModel.find();
+        if (ilwInitialPlan.length === 0) {
+            return res.status(404).send('No carbo data found');
+        }
+        res.send(ilwInitialPlan);
+    } catch (error) {
+        console.error('Error fetching ILW Initial Plan data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getAlwInitialPlan = async (req, res) => {
+    try {
+        const alwInitialPlan = await alwInitialPlanModel.find();
+        if (alwInitialPlan.length === 0) {
+            return res.status(404).send('No carbo data found');
+        }
+        res.send(alwInitialPlan);
+    } catch (error) {
+        console.error('Error fetching ALW Initial Plan data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getBgwPostPlan = async (req, res) => {
+    try {
+        const bgwPostPlan = await bgwPostPlanModel.find();
+        if (bgwPostPlan.length === 0) {
+            return res.status(404).send('No carbo data found');
+        }
+        res.send(bgwPostPlan);
+    } catch (error) {
+        console.error('Error fetching BGW Post Plan data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getAgwPostPlan = async (req, res) => {
+    try {
+        const agwPostPlan = await agwPostPlanModel.find();
+        if (agwPostPlan.length === 0) {
+            return res.status(404).send('No carbo data found');
+        }
+        res.send(agwPostPlan);
+    } catch (error) {
+        console.error('Error fetching AGW Post Plan data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+module.exports.getIgwPostPlan = async (req, res) => {
+    try {
+        const igwPostPlan = await  igwPostPlanModel.find();
+        if (igwPostPlan.length === 0) {
+            return res.status(404).send('No carbo data found');
+        }
+        res.send(igwPostPlan);
+    } catch (error) {
+        console.error('Error fetching IGW Post Plan data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+
+module.exports.getIlwPostPlan = async (req, res) => {
+    try {
+        const ilwPostPlan = await ilwPostPlanModel.find();
+        if (ilwPostPlan.length === 0) {
+            return res.status(404).send('No carbo data found');
+        }
+        res.send(ilwPostPlan);
+    } catch (error) {
+        console.error('Error fetching ILW Post Plan data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+
+module.exports.getAlwPostPlan = async (req, res) => {
+    try {
+        const alwPostPlan = await alwPostPlanModel.find();
+        if (alwPostPlan.length === 0) {
+            return res.status(404).send('No carbo data found');
+        }
+        res.send(alwPostPlan);
+    } catch (error) {
+        console.error('Error fetching ALW Post Plan data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+
+module.exports.getBlwPostPlan = async (req, res) => {
+    try {
+        const blwPostPlan = await blwPostPlanModel.find();
+        if (blwPostPlan.length === 0) {
+            return res.status(404).send('No carbo data found');
+        }
+        res.send(blwPostPlan);
+    } catch (error) {
+        console.error('Error fetching BLW Post Plan data:', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
